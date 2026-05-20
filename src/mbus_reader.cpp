@@ -8,7 +8,7 @@ void MbusReader::begin(HardwareSerial& uart, int rx_pin) {
     _uart->begin(100000, SERIAL_8E2, rx_pin, -1, true);
 }
 
-bool MbusReader::read(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe) {
+bool MbusReader::read(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe, uint8_t* flags_out) {
     unsigned long now = millis();
 
     // Reset buffer on inter-frame gap (>3ms without a byte)
@@ -28,7 +28,7 @@ bool MbusReader::read(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe) {
         if (_count == MBUS_FRAME_SIZE) {
             _count = 0;
             if (_buf[0] == MBUS_START_BYTE && _buf[24] == MBUS_END_BYTE) {
-                decode(channels, failsafe);
+                decode(channels, failsafe, flags_out);
                 return true;
             }
             // Invalid frame: wait for new start byte
@@ -37,7 +37,7 @@ bool MbusReader::read(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe) {
     return false;
 }
 
-void MbusReader::decode(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe) {
+void MbusReader::decode(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe, uint8_t* flags_out) {
     uint8_t* b = _buf;
 
     // Unpack 16 channels × 11-bit from 22 data bytes (bytes 1–22)
@@ -59,7 +59,8 @@ void MbusReader::decode(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe) {
     channels[15] = ((uint16_t)b[21] >> 5  | (uint16_t)b[22] << 3)                           & 0x07FF;
 
     uint8_t flags = b[23];
-    *failsafe = (flags & MBUS_FLAG_FAILSAFE) || (flags & MBUS_FLAG_FRAME_LOST);
+    if (flags_out) *flags_out = flags;
+    *failsafe = (flags & MBUS_FLAG_FAILSAFE) || (flags & MBUS_FLAG_FRAME_LOST) || (flags & MBUS_FLAG_SIGNAL_LOST);
 }
 
 #endif

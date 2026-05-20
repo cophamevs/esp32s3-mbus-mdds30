@@ -9,6 +9,7 @@ static Mdds30Serial  mdds;
 
 static uint16_t      channels[MBUS_NUM_CHANNELS];
 static bool          failsafe       = true;
+static uint8_t       flags          = 0;
 static unsigned long last_frame_ms  = 0;
 
 void setup() {
@@ -23,7 +24,7 @@ void setup() {
 }
 
 void loop() {
-    if (mbus.read(channels, &failsafe)) {
+    if (mbus.read(channels, &failsafe, &flags)) {
         last_frame_ms = millis();
 
         if (failsafe) {
@@ -45,8 +46,10 @@ void loop() {
         mixer_compute(throttle, steer, SPEED_MAX, &left, &right);
         mdds.send(left, right);
 
-        Serial.printf("[CH] 1=%4u 2=%4u | thr=%4d str=%4d | L=%4d R=%4d\n",
-            channels[0], channels[1], throttle, steer, left, right);
+        Serial.printf("[CH] 1=%4u 2=%4u 3=%4u 4=%4u 5=%4u 6=%4u 7=%4u | thr=%4d str=%4d | L=%4d R=%4d | 0x%02X\n",
+            channels[0], channels[1], channels[2], channels[3],
+            channels[4], channels[5], channels[6],
+            throttle, steer, left, right, flags);
     }
 
     // Timeout failsafe: no valid frame for MBUS_TIMEOUT_MS
