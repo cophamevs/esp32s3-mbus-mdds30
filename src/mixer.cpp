@@ -33,6 +33,23 @@ void mixer_compute(int8_t  throttle,
                    int8_t  speed_max,
                    int8_t* left,
                    int8_t* right) {
-    *left  = clamp8((int16_t)throttle + steer, -speed_max, speed_max);
-    *right = clamp8((int16_t)throttle - steer, -speed_max, speed_max);
+    if (throttle == 0) {
+        // No throttle: spin in place (tank pivot)
+        *left  = clamp8((int16_t)steer, -speed_max, speed_max);
+        *right = clamp8((int16_t)-steer, -speed_max, speed_max);
+    } else {
+        // With throttle: both wheels same direction, steer reduces one side
+        // steer_ratio = |steer| / speed_max  →  0.0 .. 1.0
+        // inner wheel = throttle * (1 - steer_ratio)
+        int16_t abs_str = steer < 0 ? -steer : steer;
+        int16_t inner = (int16_t)throttle * (speed_max - abs_str) / speed_max;
+
+        if (steer >= 0) {
+            *left  = throttle;                                    // outer
+            *right = clamp8(inner, -speed_max, speed_max);        // inner
+        } else {
+            *left  = clamp8(inner, -speed_max, speed_max);        // inner
+            *right = throttle;                                    // outer
+        }
+    }
 }
