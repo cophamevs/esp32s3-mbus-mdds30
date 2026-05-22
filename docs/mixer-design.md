@@ -85,6 +85,28 @@ SW: 1=ON 2=ON 3=OFF 4=OFF 5=ON 6=ON 7=OFF 8=OFF
     ──── Serial mode ────  ── 9600 bps ──  ─ No bat mon ─
 ```
 
+## Build Environments
+
+| Env | Board | Flash | PSRAM | RGB LED pin |
+|-----|-------|-------|-------|-------------|
+| `esp32s3` | lolin_s3_mini | 4MB | 2MB QIO | GPIO38 (RGB_BUILTIN) |
+| `esp32s3_n16r8` | lolin_s3 | 16MB | 8MB OPI | GPIO48 (`-DRGB_LED_PIN=48`) |
+
+N16R8: PSRAM dùng `board_build.arduino.memory_type = qio_opi`. RGB LED là WS2812B trên
+GPIO48 — **không phải** GPIO38 như board lolin_s3 chính hãng.
+
+## Safety Notes (ESP32-S3 Super Mini)
+
+Các vấn đề đã xử lý:
+
+| # | Vấn đề | Fix |
+|---|--------|-----|
+| B1 | USB CDC `Serial.printf` block khi không có host | `if (Serial)` guard + rate-limit 100ms |
+| B2 | `mdds.stop()` spam mỗi `loop()` khi timeout | Flag `motors_stopped` — chỉ gửi 1 lần |
+| B3 | Buffer overrun tiềm ẩn trong MBUS reader | Đổi `== MBUS_FRAME_SIZE` → `>=` |
+| B4 | Division by zero trong `mixer_map_channel` | Guard `if (span == 0) return 0` |
+| B5 | Startup race: timeout trigger trước frame đầu | `last_frame_ms = millis()` trong setup() |
+
 ## Known Limitations
 
 - Config calibration (MBUS_CENTER/MIN/MAX) chưa match stick thực tế

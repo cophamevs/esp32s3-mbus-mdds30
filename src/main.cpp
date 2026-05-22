@@ -25,6 +25,12 @@ void setup() {
 
     mdds.stop();               // ensure motors start stopped
     last_frame_ms = millis();  // avoid timeout-spam before first frame
+
+#ifdef RGB_LED_PIN
+    neopixelWrite(RGB_LED_PIN, RGB_BRIGHTNESS / 8, RGB_BRIGHTNESS / 8, RGB_BRIGHTNESS / 8);
+#elif defined(RGB_BUILTIN)
+    neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS / 8, RGB_BRIGHTNESS / 8, RGB_BRIGHTNESS / 8);
+#endif
     Serial.println("[MBUS] Bridge started. Waiting for signal...");
 }
 
