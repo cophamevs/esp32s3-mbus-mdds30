@@ -25,7 +25,7 @@ bool MbusReader::read(uint16_t channels[MBUS_NUM_CHANNELS], bool* failsafe, uint
 
         _buf[_count++] = b;
 
-        if (_count == MBUS_FRAME_SIZE) {
+        if (_count >= MBUS_FRAME_SIZE) {
             _count = 0;
             if (_buf[0] == MBUS_START_BYTE && _buf[24] == MBUS_END_BYTE) {
                 decode(channels, failsafe, flags_out);

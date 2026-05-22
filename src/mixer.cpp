@@ -19,10 +19,12 @@ int8_t mixer_map_channel(uint16_t raw,
 
     if (raw > hi) {
         uint16_t span = raw_max - hi;
+        if (span == 0) return 0;
         uint16_t pos  = raw - hi;
         return clamp8((int16_t)((int32_t)pos * speed_max / span), 0, speed_max);
     } else {
         uint16_t span = lo - raw_min;
+        if (span == 0) return 0;
         uint16_t pos  = lo - raw;
         return clamp8(-(int16_t)((int32_t)pos * speed_max / span), -speed_max, 0);
     }

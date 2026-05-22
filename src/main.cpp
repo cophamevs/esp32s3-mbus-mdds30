@@ -11,6 +11,10 @@ static uint16_t      channels[MBUS_NUM_CHANNELS];
 static bool          failsafe       = true;
 static uint8_t       flags          = 0;
 static unsigned long last_frame_ms  = 0;
+static bool          motors_stopped = true;
+static unsigned long last_debug_ms  = 0;
+
+#define DEBUG_INTERVAL_MS  100
 
 void setup() {
     Serial.begin(115200);      // USB CDC — debug output
@@ -20,6 +24,7 @@ void setup() {
     mdds.begin(Serial2, MDDS30_TX_PIN, MDDS30_BAUD);
 
     mdds.stop();               // ensure motors start stopped
+    last_frame_ms = millis();  // avoid timeout-spam before first frame
     Serial.println("[MBUS] Bridge started. Waiting for signal...");
 }
 
@@ -28,8 +33,11 @@ void loop() {
         last_frame_ms = millis();
 
         if (failsafe) {
-            mdds.stop();
-            Serial.println("[MBUS] FAILSAFE — motors stopped");
+            if (!motors_stopped) {
+                mdds.stop();
+                motors_stopped = true;
+                if (Serial) Serial.println("[MBUS] FAILSAFE — motors stopped");
+            }
             return;
         }
 
@@ -45,15 +53,20 @@ void loop() {
         int8_t left, right;
         mixer_compute(throttle, steer, SPEED_MAX, &left, &right);
         mdds.send(left, right);
+        motors_stopped = false;
 
-        Serial.printf("[CH] 1=%4u 2=%4u 3=%4u 4=%4u 5=%4u 6=%4u 7=%4u | thr=%4d str=%4d | L=%4d R=%4d | 0x%02X\n",
-            channels[0], channels[1], channels[2], channels[3],
-            channels[4], channels[5], channels[6],
-            throttle, steer, left, right, flags);
+        if (Serial && (millis() - last_debug_ms) >= DEBUG_INTERVAL_MS) {
+            last_debug_ms = millis();
+            Serial.printf("[CH] 1=%4u 2=%4u 3=%4u 4=%4u 5=%4u 6=%4u 7=%4u | thr=%4d str=%4d | L=%4d R=%4d | 0x%02X\n",
+                channels[0], channels[1], channels[2], channels[3],
+                channels[4], channels[5], channels[6],
+                throttle, steer, left, right, flags);
+        }
     }
 
     // Timeout failsafe: no valid frame for MBUS_TIMEOUT_MS
-    if ((millis() - last_frame_ms) > MBUS_TIMEOUT_MS) {
+    if ((millis() - last_frame_ms) > MBUS_TIMEOUT_MS && !motors_stopped) {
         mdds.stop();
+        motors_stopped = true;
     }
 }
